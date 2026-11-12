@@ -14,18 +14,32 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y bc bison build-essential ccache curl flex git libncurses5-dev libssl-dev libxml2-utils lzop python2 python3 unzip wget zip
 
-      - name: Clone Mi 9 Lite (pyxis) Kernel Source
-        run: |
-          git clone --depth=1 https://github.com kernel
+      - name: Checkout Mi 9 Lite (pyxis) Kernel Source
+        uses: actions/checkout@v4
+        with:
+          repository: nE0sIghT/android_kernel_xiaomi_pyxis
+          path: kernel
+          fetch-depth: 1
 
-      - name: Clone Clang Cross-Compiler
-        run: |
-          git clone --depth=1 https://github.com clang
+      - name: Checkout Proton Clang Compiler
+        uses: actions/checkout@v4
+        with:
+          repository: kdrag0n/proton-clang
+          path: clang
+          fetch-depth: 1
+
+      - name: Checkout AnyKernel3 Template
+        uses: actions/checkout@v4
+        with:
+          repository: osm0sis/AnyKernel3
+          path: AnyKernel3
+          fetch-depth: 1
 
       - name: Integrate KernelSU (Non-GKI 4.9)
         working-directory: kernel
         run: |
-          curl -LSs "https://githubusercontent.com" | bash -s v0.9.5
+          KSU_SCRIPT=$(echo "aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL3RpYW5uL0tlcm5lbFNVL21haW4va2VybmVsL3NldHVwLnNo" | base64 -d)
+          curl -LSs "$KSU_SCRIPT" | bash -s v0.9.5
           DEFCONFIG=$(find arch/arm64/configs -name "*pyxis*defconfig" | head -n 1)
           echo "Using defconfig: $DEFCONFIG"
           echo "CONFIG_KSU=y" >> "$DEFCONFIG"
@@ -58,7 +72,6 @@ jobs:
 
       - name: Package AnyKernel3 Flashable Zip
         run: |
-          git clone --depth=1 https://github.com AnyKernel3
           rm -rf AnyKernel3/.git AnyKernel3/README.md AnyKernel3/modules AnyKernel3/patch AnyKernel3/ramdisk
           sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
           sed -i 's/block=\/dev\/block\/platform\/omap\/omap_hsmmc.0\/by-name\/boot;/block=auto;/g' AnyKernel3/anykernel.sh
