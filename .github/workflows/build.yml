@@ -94,6 +94,8 @@ jobs:
           PYEOF
 
           DEFCONFIG=$(find arch/arm64/configs -name "*pyxis*defconfig" | head -n 1)
+          echo "CONFIG_OVERLAY_FS=y" >> "$DEFCONFIG"
+          echo "CONFIG_KPROBES=y" >> "$DEFCONFIG"
           echo "CONFIG_KSU=y" >> "$DEFCONFIG"
           echo "CONFIG_KSU_DEBUG=n" >> "$DEFCONFIG"
           echo "CONFIG_TCP_CONG_ADVANCED=y" >> "$DEFCONFIG"
