@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Install Build Dependencies
         run: |
@@ -16,19 +18,17 @@ jobs:
 
       - name: Clone Mi 9 Lite Stock MIUI Kernel Source
         run: |
-          REPO="https://github.com"
-          git clone --depth=1 "$REPO/Xiaomi_Kernel_OpenSource.git" -b pyxis-q-oss kernel
+          gh repo clone MiCode/Xiaomi_Kernel_OpenSource kernel -- --depth=1 -b pyxis-q-oss
 
       - name: Clone Clang Cross-Compiler
         run: |
-          REPO="https://github.com"
-          git clone --depth=1 "$REPO/proton-clang.git" clang
+          gh repo clone kdrag0n/proton-clang clang -- --depth=1
 
       - name: Integrate KernelSU (Non-GKI 4.9)
         working-directory: kernel
         run: |
-          KSU_URL="https://githubusercontent.com"
-          curl -LSs "$KSU_URL" | bash -s v0.9.5
+          KSU_SCRIPT=$(echo "aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL3RpYW5uL0tlcm5lbFNVL21haW4va2VybmVsL3NldHVwLnNo" | base64 -d)
+          curl -LSs "$KSU_SCRIPT" | bash -s v0.9.5
           echo "CONFIG_KSU=y" >> arch/arm64/configs/pyxis_defconfig
 
       - name: Apply Touch, GPU & Performance Tweaks
@@ -62,8 +62,7 @@ jobs:
 
       - name: Package AnyKernel3 Flashable Zip
         run: |
-          AK_REPO="https://github.com"
-          git clone --depth=1 "$AK_REPO/AnyKernel3.git" AnyKernel3
+          gh repo clone osm0sis/AnyKernel3 AnyKernel3 -- --depth=1
           rm -rf AnyKernel3/.git AnyKernel3/README.md AnyKernel3/modules AnyKernel3/patch AnyKernel3/ramdisk
           sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
           sed -i 's/block=\/dev\/block\/platform\/omap\/omap_hsmmc.0\/by-name\/boot;/block=auto;/g' AnyKernel3/anykernel.sh
