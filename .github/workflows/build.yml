@@ -18,11 +18,11 @@ jobs:
 
       - name: Clone Mi 9 Lite Stock MIUI Kernel Source
         run: |
-          gh repo clone MiCode/Xiaomi_Kernel_OpenSource kernel -- --depth=1 -b pyxis-q-oss
+          git clone --depth=1 https://github.com -b pyxis-q-oss kernel
 
       - name: Clone Clang Cross-Compiler
         run: |
-          gh repo clone kdrag0n/proton-clang clang -- --depth=1
+          git clone --depth=1 https://github.com clang
 
       - name: Integrate KernelSU (Non-GKI 4.9)
         working-directory: kernel
@@ -62,7 +62,7 @@ jobs:
 
       - name: Package AnyKernel3 Flashable Zip
         run: |
-          gh repo clone osm0sis/AnyKernel3 AnyKernel3 -- --depth=1
+          git clone --depth=1 https://github.com AnyKernel3
           rm -rf AnyKernel3/.git AnyKernel3/README.md AnyKernel3/modules AnyKernel3/patch AnyKernel3/ramdisk
           sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
           sed -i 's/block=\/dev\/block\/platform\/omap\/omap_hsmmc.0\/by-name\/boot;/block=auto;/g' AnyKernel3/anykernel.sh
