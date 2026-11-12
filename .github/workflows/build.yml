@@ -1,0 +1,78 @@
+name: Build Mi 9 Lite KernelSU Kernel
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison build-essential ccache curl flex git libncurses5-dev libssl-dev libxml2-utils lzop python2 python3 unzip wget zip
+
+      - name: Clone Mi 9 Lite Stock MIUI Kernel Source
+        run: |
+          git clone --depth=1 https://github.com -b pyxis-q-oss kernel
+          cd kernel
+
+      - name: Clone Clang & GCC Cross-Compilers
+        run: |
+          git clone --depth=1 https://github.com clang
+
+      - name: Integrate KernelSU (Non-GKI 4.9)
+        working-directory: kernel
+        run: |
+          curl -LSs "https://githubusercontent.com" | bash -s v0.9.5
+          echo "CONFIG_KSU=y" >> arch/arm64/configs/pyxis_defconfig
+
+      - name: Apply Touch, GPU & Performance Tweaks
+        working-directory: kernel
+        run: |
+          # Enable BBR TCP congestion control & WireGuard/performance options
+          echo "CONFIG_TCP_CONG_ADVANCED=y" >> arch/arm64/configs/pyxis_defconfig
+          echo "CONFIG_TCP_CONG_BBR=y" >> arch/arm64/configs/pyxis_defconfig
+          echo "CONFIG_DEFAULT_BBR=y" >> arch/arm64/configs/pyxis_defconfig
+          # Speed up schedutil governor ramp-up in kernel source
+          sed -i 's/DEFAULT_RATE_LIMIT_US.*/DEFAULT_RATE_LIMIT_US (500)/g' kernel/sched/cpufreq_schedutil.c || true
+
+      - name: Compile Kernel
+        working-directory: kernel
+        run: |
+          export PATH="$GITHUB_WORKSPACE/clang/bin:$PATH"
+          export ARCH=arm64
+          export SUBARCH=arm64
+          make O=out ARCH=arm64 pyxis_defconfig
+          make -j$(nproc --all) O=out \
+            ARCH=arm64 \
+            CC=clang \
+            CLANG_TRIPLE=aarch64-linux-gnu- \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+            Image.gz-dtb dtbo.img || make -j$(nproc --all) O=out \
+            ARCH=arm64 \
+            CC=clang \
+            CLANG_TRIPLE=aarch64-linux-gnu- \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+            Image.gz-dtb
+
+      - name: Package AnyKernel3 Flashable Zip
+        run: |
+          git clone --depth=1 https://github.com AnyKernel3
+          rm -rf AnyKernel3/.git AnyKernel3/README.md AnyKernel3/modules AnyKernel3/patch AnyKernel3/ramdisk
+          sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
+          sed -i 's/block=\/dev\/block\/platform\/omap\/omap_hsmmc.0\/by-name\/boot;/block=auto;/g' AnyKernel3/anykernel.sh
+          sed -i 's/is_slot_device=0;/is_slot_device=auto;/g' AnyKernel3/anykernel.sh
+          cp kernel/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
+          cp kernel/out/arch/arm64/boot/dtbo.img AnyKernel3/ || true
+          cd AnyKernel3 && zip -r9 ../Mi9Lite_KSU_Performance.zip *
+
+      - name: Upload Flashable Kernel Zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mi9Lite_KSU_Performance
+          path: Mi9Lite_KSU_Performance.zip
